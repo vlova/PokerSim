@@ -10,6 +10,20 @@ namespace Tests
     {
         public static IEnumerable<TestCaseData> CompareHandsTestCases = (new[] {
             new CompareHandsTestCase{
+                NameSuffix = "HighestKicker",
+                CommonCards = "2♥ 4♣ 6♤ 8♥ 10♣",
+                AliceCards = "J♢ A♢",
+                BobCards = "Q♥ K♢",
+                ExpectedTopHandPlayer = TopHandPlayer.Alice
+            },
+            new CompareHandsTestCase{
+                NameSuffix = "BothOfEqualKickers",
+                CommonCards = "2♥ 4♣ 6♤ 8♥ 10♣",
+                AliceCards = "J♢ A♢",
+                BobCards = "Q♥ A♥",
+                ExpectedTopHandPlayer = TopHandPlayer.Both
+            },
+            new CompareHandsTestCase{
                 NameSuffix = "PairVersusNothing",
                 CommonCards = "2♥ 4♣ 6♤ 8♥ 10♣",
                 AliceCards = "2♢ Q♢",
