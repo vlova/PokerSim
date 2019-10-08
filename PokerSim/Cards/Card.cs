@@ -32,5 +32,4 @@ namespace PokerSim.Cards
             return $"{Value}:{Suit}";
         }
     }
-
 }

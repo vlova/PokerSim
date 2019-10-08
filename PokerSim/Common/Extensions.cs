@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 
 namespace PokerSim.Common
 {
-    public static class Extensions
+    public static class EnumerableExtensions
     {
 
         private static RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider();
@@ -16,8 +16,16 @@ namespace PokerSim.Common
 
             rng.GetBytes(data);
 
-            var number = Math.Abs(BitConverter.ToInt32(data, 0));
+            // well, ok, using of LossyAbs will make bias on random, but it's small
+            var number = LossyAbs(BitConverter.ToInt32(data, 0));
             return number % size;
+        }
+
+        private static int LossyAbs(int value)
+        {
+            if (value >= 0) return value;
+            if (value == int.MinValue) return int.MaxValue;
+            return -value;
         }
 
 
@@ -64,6 +72,23 @@ namespace PokerSim.Common
                 .ToList();
 
             return result;
+        }
+
+        public static List<List<T>> Transpose<T>(this List<List<T>> source)
+        {
+            var transposed = new List<List<T>>();
+            var innerItemsSize = source.First().Count;
+            var outerItemsSize = source.Count;
+            for (var j = 0; j < innerItemsSize; j++)
+            {
+                transposed.Add(new List<T>());
+                for (var i = 0; i < outerItemsSize; i++)
+                {
+                    transposed[j].Add(source[i][j]);
+                }
+            }
+
+            return transposed;
         }
     }
 }

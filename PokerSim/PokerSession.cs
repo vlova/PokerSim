@@ -74,27 +74,27 @@ namespace PokerSim
         void Showdown()
         {
             var detector = new PokerHandDetector();
-            List<Player> winnerPlayers = new List<Player>();
-            PokerHand winnerHand = null;
+            List<Player> currentWinners = new List<Player>();
+            PokerHand currentWinnerHand = null;
             foreach (var player in this.Players)
             {
                 var cards = this.CommunityCards.Concat(player.Cards).ToHashSet();
-                var playerTopHands = detector.DetectTopPokerHand(cards);
-                if (winnerHand == null || winnerHand.CompareTo(playerTopHands) <= 0)
+                var playerTopHand = detector.DetectTopPokerHand(cards);
+                if (currentWinnerHand == null || currentWinnerHand.CompareTo(playerTopHand) <= 0)
                 {
-                    if (winnerHand != null && winnerHand.CompareTo(playerTopHands) == 0)
+                    if (currentWinnerHand != null && currentWinnerHand.CompareTo(playerTopHand) == 0)
                     {
-                        winnerPlayers.Add(player);
+                        currentWinners.Add(player);
                     }
                     else
                     {
-                        winnerPlayers = new List<Player>() { player };
+                        currentWinners = new List<Player>() { player };
                     }
-                    winnerHand = playerTopHands;
+                    currentWinnerHand = playerTopHand;
                 }
             }
 
-            this.Winners = winnerPlayers;
+            this.Winners = currentWinners;
         }
 
         static IEnumerable<Card> GetDeck()

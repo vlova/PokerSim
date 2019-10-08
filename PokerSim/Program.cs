@@ -1,6 +1,8 @@
-﻿using PokerSim.Cards;
+﻿using PokerSim.Simulations;
 using System;
-using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Text;
 
 namespace PokerSim
 {
@@ -9,35 +11,52 @@ namespace PokerSim
     {
         static void Main(string[] args)
         {
-            var playerCheatCards = new List<Card>() {
-                new Card(CardValue.Ace, Suit.Clovers),
-                //new Card(CardValue.Ace, Suit.Diamonds)
-            };
+            ReMakeRecords(2);
+            ReMakeRecords(3);
+            ReMakeRecords(4);
+            ReMakeRecords(5);
+            ReMakeRecords(6);
+            ReMakeRecords(8);
+            ReMakeRecords(9);
+        }
 
-            var deckCheatCards = new List<Card>() {
-                //new Card(CardValue.Ace, Suit.Diamonds)
-            };
+        private static void ReMakeRecords(int playerCount)
+        {
+            var csvFilePath = Path.Combine(Directory.GetCurrentDirectory(), $"all-in-{playerCount}players.csv");
+            Console.WriteLine(csvFilePath);
 
-            var simulationAmount = 1000;
-            var wonAmount = 0;
-            var wonSingleAmount = 0;
-
-            for (var i = 0; i < simulationAmount; i++)
+            using (var fileStream = new FileStream(csvFilePath, FileMode.Create))
             {
-                var playerIndex = 0;
-                var session = new PokerSession(amountOfPlayers: 5);
-                session.CheatPlayerCards(session.Players[playerIndex], playerCheatCards);
-                session.CheatDeckCards(deckCheatCards);
-                session.Simulate();
-                var won = session.Winners.Contains(session.Players[playerIndex]);
-                var wonSingle = won && session.Winners.Count == 1;
-                if (won) { wonAmount += 1; }
-                if (wonSingle) { wonSingleAmount += 1; }
-            }
+                using (var writer = new StreamWriter(fileStream, Encoding.UTF8))
+                {
+                    using (var csvWriter = new CsvHelper.CsvWriter(writer))
+                    {
+                        csvWriter.WriteHeader<AllInSimulation.SimulationResult>();
+                        csvWriter.Flush();
+                        writer.WriteLine();
+                        writer.Flush();
 
-            Console.WriteLine($"{wonAmount}/{simulationAmount}");
-            Console.WriteLine($"{wonSingleAmount}/{simulationAmount}");
+                        var allInSimulation = new AllInSimulation();
+                        var simulationResults = allInSimulation.Run(new AllInSimulation.SimulationOptions
+                        {
+                            ConfidenceLevel = ConfidenceLevel.L95,
+                            DesiredRelativeError = 0.02,
+                            PlayerCount = playerCount
+                        });
+
+                        var watch = Stopwatch.StartNew();
+                        foreach (var result in simulationResults)
+                        {
+                            csvWriter.WriteRecord(result);
+                            csvWriter.Flush();
+                            writer.WriteLine();
+                            writer.Flush();
+
+                            Console.WriteLine($"Processed {result.Card1}, {result.Card2}. Elapsed totally {watch.Elapsed}, Time: {DateTime.Now}");
+                        }
+                    }
+                }
+            }
         }
     }
-
 }
