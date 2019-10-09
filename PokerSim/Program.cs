@@ -11,18 +11,12 @@ namespace PokerSim
     {
         static void Main(string[] args)
         {
-            ReMakeRecords(2);
-            ReMakeRecords(3);
-            ReMakeRecords(4);
             ReMakeRecords(5);
-            ReMakeRecords(6);
-            ReMakeRecords(8);
-            ReMakeRecords(9);
         }
 
         private static void ReMakeRecords(int playerCount)
         {
-            var csvFilePath = Path.Combine(Directory.GetCurrentDirectory(), $"all-in-{playerCount}players.csv");
+            var csvFilePath = Path.Combine(Directory.GetCurrentDirectory(), $"all-in-versusFold-{playerCount}players.csv");
             Console.WriteLine(csvFilePath);
 
             using (var fileStream = new FileStream(csvFilePath, FileMode.Create))
@@ -36,11 +30,12 @@ namespace PokerSim
                         writer.WriteLine();
                         writer.Flush();
 
-                        var allInSimulation = new AllInSimulation();
-                        var simulationResults = allInSimulation.Run(new AllInSimulation.SimulationOptions
+                        var simulation = new AllInVersusFoldBadCardsSimulation();
+                        var simulationResults = simulation.Run(new AllInSimulation.SimulationOptions
                         {
                             ConfidenceLevel = ConfidenceLevel.L95,
-                            DesiredRelativeError = 0.02,
+                            WinLoseRatesDesiredRelativeError = 0.02,
+                            BalanceDesiredAbsoluteError = 0.01,
                             PlayerCount = playerCount
                         });
 

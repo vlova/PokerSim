@@ -22,7 +22,7 @@ namespace PokerSim
                     ParallelEnumerable.Range(0, batchAmounts)
                     .Select(_ => RunOnce(options, batchSize)));
 
-                if (RelativeError(options, batchRunResults) > options.DesiredRelativeError)
+                if (!IsGoodEnough(options, batchRunResults))
                 {
                     continue;
                 }
@@ -47,20 +47,40 @@ namespace PokerSim
             { ConfidenceLevel.L99, 2.576}
         };
 
-        private static double RelativeError<T>(BenchmarkOptions<T> options, List<T> batchRunResults)
+        private static bool IsGoodEnough<T>(BenchmarkOptions<T> options, List<T> batchRunResults)
         {
-            var statsByValues = batchRunResults.Select(runResult => options.GetQuantifiedValues(runResult).ToList()).ToList().Transpose();
-            return statsByValues
-                .Select(stats => RelativeError(options, stats))
-                .Max();
+            return options.QuantifiedValues.All(valueOptions => IsGoodEnough(valueOptions, batchRunResults));
         }
 
-        private static double RelativeError<T>(BenchmarkOptions<T> options, List<double> stats)
+        private static bool IsGoodEnough<T>(QuantifiedValueOptions<T> valueOptions, List<T> batchRunResults)
+        {
+            var stats = batchRunResults.Select(runResult => valueOptions.GetQuantifiedValue(runResult)).ToList();
+
+            var isNiceRelativeError
+                = !valueOptions.DesiredRelativeError.HasValue
+                || RelativeError(valueOptions, stats) <= valueOptions.DesiredRelativeError;
+
+            var isNiceAbsoluteError
+                = !valueOptions.DesiredAbsoluteError.HasValue
+                || AbsoluteError(valueOptions, stats) <= valueOptions.DesiredAbsoluteError;
+
+            return isNiceRelativeError && isNiceAbsoluteError;
+        }
+
+        private static double RelativeError<T>(QuantifiedValueOptions<T> options, List<double> stats)
         {
             var (mean, deviation) = Statistics.MeanStandardDeviation(stats);
             var sem = deviation / Math.Sqrt(stats.Count);
             var marginOfErrorInPercents = sem * ConfidenceToFactor[options.ConfidenceLevel] / mean;
             return marginOfErrorInPercents;
+        }
+
+        private static double AbsoluteError<T>(QuantifiedValueOptions<T> options, List<double> stats)
+        {
+            var deviation = Statistics.StandardDeviation(stats);
+            var sem = deviation / Math.Sqrt(stats.Count);
+            var marginOfError = sem * ConfidenceToFactor[options.ConfidenceLevel];
+            return marginOfError;
         }
     }
 }

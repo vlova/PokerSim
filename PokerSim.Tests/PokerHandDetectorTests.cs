@@ -93,7 +93,6 @@ namespace Tests
             },
         }).Select(ToNUnitCase);
 
-        [Test]
         [TestCaseSource(nameof(DetectHandTestCases))]
         public void PokerHandDetectorShouldDetectCombination(DetectHandTestCase testCase)
         {

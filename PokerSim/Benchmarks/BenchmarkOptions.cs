@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace PokerSim
 {
@@ -12,10 +13,6 @@ namespace PokerSim
 
         public Func<T, T, T> Combine { get; set; }
 
-        public Func<T, double[]> GetQuantifiedValues { get; set; }
-
-        public ConfidenceLevel ConfidenceLevel { get; set; }
-
-        public double DesiredRelativeError { get; set; }
+        public List<QuantifiedValueOptions<T>> QuantifiedValues { get; set; }
     }
 }

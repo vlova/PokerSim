@@ -4,10 +4,17 @@ using System.Collections.Generic;
 
 namespace PokerSim
 {
-    class Player
+    public class Player
     {
         public Guid Id { get; set; }
+
+        public bool IsActive { get; set; }
+
+        public decimal PlayerPot { get; set; }
+
         public List<Card> Cards { get; set; }
+
+        public IPlayerStrategy Strategy { get; set; }
 
         public Player()
         {
@@ -20,5 +27,4 @@ namespace PokerSim
             return this.Id.ToString();
         }
     }
-
 }

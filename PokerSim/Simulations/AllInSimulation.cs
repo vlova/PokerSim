@@ -4,7 +4,6 @@ using PokerSim.Common;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace PokerSim.Simulations
 {
@@ -33,7 +32,7 @@ namespace PokerSim.Simulations
                     Runs = result.Runs,
                     ConfidenceLevel = options.ConfidenceLevel,
                     PlayerCount = options.PlayerCount,
-                    RelativeError = options.DesiredRelativeError,
+                    WinLoseRatesRelativeError = options.WinLoseRatesDesiredRelativeError,
                     Balance = result.Balance / result.Runs
                 };
             }
@@ -41,21 +40,23 @@ namespace PokerSim.Simulations
 
         public class SimulationOptions
         {
-            public double DesiredRelativeError { get; set; }
+            public double WinLoseRatesDesiredRelativeError { get; set; }
 
             public ConfidenceLevel ConfidenceLevel { get; set; }
 
             public int PlayerCount { get; set; }
+
+            public double BalanceDesiredAbsoluteError { get; set; }
         }
 
         public class SimulationResult
         {
             [Index(0)]
-            [CsvHelper.Configuration.Attributes.TypeConverter(typeof(CardCsvTypeConverter))]
+            [TypeConverter(typeof(CardCsvTypeConverter))]
             public Card Card1 { get; set; }
 
             [Index(1)]
-            [CsvHelper.Configuration.Attributes.TypeConverter(typeof(CardCsvTypeConverter))]
+            [TypeConverter(typeof(CardCsvTypeConverter))]
             public Card Card2 { get; set; }
 
             [Index(2)]
@@ -74,15 +75,18 @@ namespace PokerSim.Simulations
             public int Runs { get; set; }
 
             [Index(7)]
-            public double RelativeError { get; set; }
+            public double WinLoseRatesRelativeError { get; set; }
 
             [Index(8)]
+            public double BalanceAbsoluteError { get; set; }
+
+            [Index(9)]
             public ConfidenceLevel ConfidenceLevel { get; set; }
 
-            [Index(9)]
+            [Index(10)]
             public int PlayerCount { get; set; }
 
-            [Index(9)]
+            [Index(11)]
             public decimal Balance { get; set; }
         }
 
@@ -99,7 +103,7 @@ namespace PokerSim.Simulations
             public int Runs { get; set; }
         }
 
-        private static IntermediateSimulationResult ComputeChances(SimulationOptions options, IList<Card> cards)
+        private IntermediateSimulationResult ComputeChances(SimulationOptions options, IList<Card> cards)
         {
             var runner = new BenchmarkRunner();
             var result = runner.Run(new BenchmarkOptions<IntermediateSimulationResult>
@@ -108,19 +112,16 @@ namespace PokerSim.Simulations
                 Seed = new IntermediateSimulationResult { Draw = 0, Runs = 0, Won = 0, WonSingle = 0, Balance = 0 },
                 RunOnce = () =>
                 {
+                    var startingPot = 1;
                     var playerIndex = 0;
-                    var session = new PokerSession(amountOfPlayers: options.PlayerCount);
+                    var players = MakePlayers(options, startingPot);
+                    var session = new PokerSession(players);
                     session.CheatPlayerCards(session.Players[playerIndex], cards);
                     session.Simulate();
 
                     var won = session.Winners.Contains(session.Players[playerIndex]);
                     var wonSingle = won && session.Winners.Count == 1;
-                    var baseBid = (decimal)1;
-                    var balance = -baseBid + (
-                        won
-                            ? session.Players.Count * baseBid / session.Winners.Count
-                            : 0
-                        );
+                    var balance = -startingPot + session.Players[0].PlayerPot;
 
                     return new IntermediateSimulationResult
                     {
@@ -142,17 +143,41 @@ namespace PokerSim.Simulations
                         Runs = (a.Runs + b.Runs)
                     };
                 },
-                GetQuantifiedValues = a => new[] {
-                        (double)a.Won / a.Runs,
-                        (double)a.WonSingle / a.Runs,
-                        //(double)a.Balance / a.Runs,
-                        //(double)a.draw / a.runs,
-                        (double)(a.Runs - a.Won) / a.Runs
+                QuantifiedValues = new List<QuantifiedValueOptions<IntermediateSimulationResult>> {
+                    new QuantifiedValueOptions<IntermediateSimulationResult> {
+                        GetQuantifiedValue = a => (double)a.Won / a.Runs,
+                        ConfidenceLevel = options.ConfidenceLevel,
+                        DesiredRelativeError = options.WinLoseRatesDesiredRelativeError
                     },
-                ConfidenceLevel = options.ConfidenceLevel,
-                DesiredRelativeError = options.DesiredRelativeError
+                    new QuantifiedValueOptions<IntermediateSimulationResult> {
+                        GetQuantifiedValue = a => (double)a.WonSingle / a.Runs,
+                        ConfidenceLevel = options.ConfidenceLevel,
+                        DesiredRelativeError = options.WinLoseRatesDesiredRelativeError
+                    },
+                    new QuantifiedValueOptions<IntermediateSimulationResult> {
+                        GetQuantifiedValue = a => (double)(a.Runs - a.Won) / a.Runs,
+                        ConfidenceLevel = options.ConfidenceLevel,
+                        DesiredRelativeError = options.WinLoseRatesDesiredRelativeError
+                    },
+                    new QuantifiedValueOptions<IntermediateSimulationResult>{
+                        GetQuantifiedValue = a => (double)a.Balance / a.Runs,
+                        ConfidenceLevel = options.ConfidenceLevel,
+                        DesiredAbsoluteError = options.BalanceDesiredAbsoluteError
+                    }
+                }
             });
             return result;
+        }
+
+        protected virtual List<Player> MakePlayers(SimulationOptions options, int startingPot)
+        {
+            return Enumerable
+                    .Range(0, options.PlayerCount)
+                    .Select(i => new Player()
+                    {
+                        PlayerPot = startingPot,
+                        Strategy = new AllInStrategy()
+                    }).ToList();
         }
 
         private static IEnumerable<IList<Card>> GeneratePairs(IEnumerable<Card> cards)
